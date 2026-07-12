@@ -1,0 +1,27 @@
+# Firebase App Hosting configuration
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+#
+# App Hosting builds with `npm ci` and starts the server with `npm start`.
+# PORT is injected automatically by the runtime; server.js already reads process.env.PORT.
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+
+env:
+  # Non-secret configuration
+  - variable: GEMINI_MODEL
+    value: gemini-2.5-flash
+    availability:
+      - RUNTIME
+
+  # Secret — do NOT put the key here. Create it once with:
+  #   firebase apphosting:secrets:set GEMINI_API_KEY
+  # then paste the key when prompted. This references that secret by name.
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME

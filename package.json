@@ -8,6 +8,9 @@
     "start": "node --use-system-ca server.js",
     "dev": "node --use-system-ca --watch server.js"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@google/genai": "^0.14.0",
     "cors": "^2.8.5",
