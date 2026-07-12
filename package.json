@@ -1,0 +1,17 @@
+{
+  "name": "advisorloop",
+  "version": "0.1.0",
+  "description": "AdvisorLoop - agentic AI diagnostic assistant for solo AI consultants serving SMEs. AI does the first pass, the consultant makes the call.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --use-system-ca server.js",
+    "dev": "node --use-system-ca --watch server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.14.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1"
+  }
+}

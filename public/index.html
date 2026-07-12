@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdvisorLoop</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --surface-1: #f0efe9;
+    --border: #ddd9cf; --text: #1c1b19; --text-secondary: #5f5e5a; --text-muted: #8a887f;
+    --accent: #185fa5; --accent-bg: #e6f1fb;
+    --success: #3b6d11; --success-bg: #eaf3de;
+    --warning: #854f0b; --warning-bg: #faeeda;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); padding: 24px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  header h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .tagline { color: var(--text-muted); font-size: 13px; margin: 0 0 20px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 14px;
+  }
+  textarea {
+    width: 100%; min-height: 130px; font-size: 13px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 10px;
+    resize: vertical;
+  }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  label.inline { font-size: 12px; color: var(--text-secondary); display: flex; gap: 6px; align-items: center; }
+  input[type=number], input[type=text] {
+    font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  }
+  button {
+    background: var(--text); color: #fff; border: none; border-radius: 6px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.sample { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+
+  .trace { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .trace span {
+    font-size: 12px; background: var(--surface-1); border-radius: 6px; padding: 5px 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+  .dot.done { background: var(--success); }
+  .dot.active { background: var(--accent); }
+
+  .task-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .task-title span.name { font-weight: 600; font-size: 14px; }
+  .badge { font-size: 11px; padding: 2px 9px; border-radius: 6px; white-space: nowrap; }
+  .badge.high_confidence { background: var(--success-bg); color: var(--success); }
+  .badge.needs_clarification { background: var(--warning-bg); color: var(--warning); }
+  .badge.needs_human_judgment { background: var(--accent-bg); color: var(--accent); }
+
+  .obs { font-size: 13px; color: var(--text-secondary); margin: 8px 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin: 10px 0; }
+  .stat { background: var(--surface-1); border-radius: 8px; padding: 8px; }
+  .stat p { margin: 0; }
+  .stat .l { font-size: 11px; color: var(--text-muted); }
+  .stat .v { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+  .clarify-box { background: var(--surface-1); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+  .clarify-box p { margin: 0 0 8px; font-size: 13px; }
+
+  .review { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .review .left { border-right: 1px solid var(--border); padding-right: 12px; }
+  .review .l-label { font-size: 11px; color: var(--text-muted); margin: 0 0 4px; }
+  .decision { display: flex; gap: 6px; margin-top: 4px; }
+  .decision button { padding: 5px 12px; font-size: 12px; }
+  .decision button.on-approve { background: var(--success); }
+  .decision button.on-reject { background: var(--text-muted); }
+
+  .footer-note { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+  .lang-toggle { font-size: 12px; }
+  .lang-toggle button { padding: 4px 10px; font-size: 12px; }
+  .hidden { display: none; }
+  .rate-field { display:flex; gap:6px; align-items:center; }
+
+  /* ---- Client-facing report sheet ---- */
+  .report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 2px solid var(--text); padding-bottom: 10px; margin-bottom: 12px; }
+  .report-head h2 { font-size: 18px; margin: 0; }
+  .report-sub { font-size: 12px; color: var(--text-muted); margin: 4px 0 0; }
+  .report-brand { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .report-intro { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+  .report-summary { font-size: 12px; color: var(--text-secondary); margin: 0 0 10px; }
+  .report-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .report-item .ri-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .report-item .ri-name { font-weight: 600; font-size: 14px; }
+  .report-item .ri-value { font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .report-item .ri-value.judgment { color: var(--accent); font-size: 12px; }
+  .report-item .ri-obs { font-size: 12px; color: var(--text-secondary); margin: 6px 0 0; }
+  .report-item .ri-rec { font-size: 13px; color: var(--text); margin: 6px 0 0; }
+  .report-item .ri-hours { font-size: 11px; color: var(--text-muted); margin: 4px 0 0; }
+
+  .report-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 14px; }
+  .hero-metric { background: var(--accent-bg); border-radius: 10px; padding: 14px 16px; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .hero-num { font-size: 24px; font-weight: 700; color: var(--accent); line-height: 1.15; }
+  .hero-lbl { font-size: 11px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .report-cta { background: var(--text); color: #fff; border-radius: 10px; padding: 14px 16px; margin-top: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .report-cta .cta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.65; }
+  .report-cta .cta-text { font-size: 14px; font-weight: 500; margin-top: 4px; }
+  .hero-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+
+  /* ---- Automation flow diagram (SVG) ---- */
+  .flow-heading { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 10px 0 2px; }
+  .flow-wrap { overflow-x: auto; padding: 2px 0 4px; }
+  .flow-svg { display: block; }
+  .flow-node { opacity: 0; animation: flowpop 0.5s ease forwards; }
+  @keyframes flowpop { to { opacity: 1; } }
+  .flow-conn { stroke-dasharray: 6 6; animation: flowdash 0.8s linear infinite; }
+  @keyframes flowdash { to { stroke-dashoffset: -12; } }
+  @media print {
+    .flow-node { opacity: 1 !important; animation: none !important; }
+    .flow-conn { animation: none !important; }
+    .flow-wrap { overflow: visible; }
+  }
+
+  /* ---- Consultant overview bar (work area, internal) ---- */
+  .overview { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; }
+  .ov-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ov-count b { font-size: 20px; }
+  .ov-count span { font-size: 12px; color: var(--text-secondary); margin-left: 4px; }
+  .ov-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ovchip { font-size: 11px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+  .ovchip.hc { background: var(--success-bg); color: var(--success); }
+  .ovchip.nc { background: var(--warning-bg); color: var(--warning); }
+  .ovchip.hj { background: var(--accent-bg); color: var(--accent); }
+  .ov-bottom { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-secondary); }
+  .ov-bottom b { color: var(--text); }
+
+  /* ---- Print / PDF export ---- */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .wrap { max-width: none; }
+    header, .tagline, #trace, #taskList, .no-print { display: none !important; }
+    #reportCard { border: none; margin: 0; padding: 0; }
+    .report-sheet { padding: 24px; }
+    .report-item { break-inside: avoid; }
+    a[href]:after { content: ""; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AdvisorLoop</h1>
+  </header>
+  <p class="tagline">AI does the first pass. You make the call.</p>
+
+  <div class="card">
+    <textarea id="rawInput" placeholder="Paste your client's raw material (chat log, notes, emails)"></textarea>
+    <div class="row">
+      <button id="analyzeBtn">Analyze</button>
+      <label class="inline">Hourly rate ($) <input type="number" id="hourlyRate" value="20" min="1" style="width:60px"></label>
+      <label class="inline">Prepared for <input type="text" id="clientName" placeholder="client name" style="width:130px"></label>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <span style="font-size:12px; color:var(--text-secondary);">Try a sample:</span>
+      <button class="sample" data-sample="bakery" type="button">🧁 Bakery (WhatsApp)</button>
+      <button class="sample" data-sample="grocery" type="button">🛒 Grocery (interview)</button>
+      <button class="sample" data-sample="mover" type="button">🚚 Mover (email)</button>
+    </div>
+  </div>
+
+  <div class="trace hidden" id="trace">
+    <span id="traceParser"><span class="dot"></span> Parser</span>
+    <span id="traceAnalyst"><span class="dot"></span> Analyst</span>
+    <span id="traceCompiler"><span class="dot"></span> Compiler</span>
+  </div>
+
+  <div id="overviewBar" class="overview hidden"></div>
+
+  <div id="taskList"></div>
+
+  <div class="card hidden" id="reportCard">
+    <div class="row no-print" style="justify-content: space-between; margin-top:0;">
+      <span style="font-weight:600; font-size:14px;">Diagnostic report preview</span>
+      <span style="display:flex; gap:10px; align-items:center;">
+        <span class="lang-toggle">
+          <button class="secondary" id="langEn">EN</button>
+          <button class="secondary" id="langZh">中文</button>
+        </span>
+        <button id="exportBtn" type="button">Export PDF</button>
+      </span>
+    </div>
+
+    <div id="reportSheet" class="report-sheet">
+      <div class="report-head">
+        <div>
+          <h2 id="reportTitle">AI Automation Diagnostic</h2>
+          <p class="report-sub" id="reportSub"></p>
+        </div>
+        <div class="report-brand">AdvisorLoop</div>
+      </div>
+      <p class="report-intro" id="reportIntro"></p>
+      <div id="reportBody"></div>
+      <p class="footer-note" id="footerNote">This is a rapid diagnostic. Full implementation roadmap available upon consultation.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const SAMPLES = {
+  bakery: `[Mon 9:03am] Sharon: hi auntie mei still taking orders for this weekend? need 1 chocolate cake for sat
+[Mon 9:15am] Auntie Mei: yes can! 8 inch or 6 inch
+[Mon 9:16am] Sharon: 8 inch, how much
+[Mon 9:20am] Auntie Mei: $38 for 8 inch chocolate, paynow ok?
+[Mon 9:22am] Sharon: ok paynow to which number
+[Mon 9:23am] Auntie Mei: 9123xxxx
+[Mon 9:45am] Sharon: sent! [image: paynow receipt]
+[Mon 9:50am] Auntie Mei: received tks, sat what time collect
+
+[Mon 11:02am] Wei Ling: hi do u still have pandan cake today
+[Mon 11:10am] Auntie Mei: sold out today sorry, tmr can reserve
+[Mon 11:11am] Wei Ling: ok reserve 1 for tmr can deliver or self collect only
+[Mon 11:30am] Auntie Mei: self collect only leh, unless order above $60 got free delivery within 5km
+
+[Mon 2:15pm] Rachel: hi confirm my order for next sat still on right? red velvet 6 inch
+[Mon 2:40pm] Auntie Mei: let me check... ya still on, $32
+[Mon 2:41pm] Rachel: already paid last week leh, u never check meh
+[Mon 2:50pm] Auntie Mei: oh sorry ya got got, my notebook messy today my bad
+
+[Mon 4:20pm] Jaslyn: auntie can I get a discount if I order 3 cakes for my company event
+[Mon 4:45pm] Auntie Mei: how many pax ah, let me think about it first
+
+[Mon 5:10pm] Unknown: hi what time do you close today
+[Mon 5:12pm] Auntie Mei: 8pm today
+
+[Mon 6:00pm] Priya: hi need urgent order can deliver tonight for birthday surprise, willing pay extra
+[Mon 6:30pm] Auntie Mei: omg tonight very rush leh, let me see what I can do
+
+[Tue 9:10am] Sharon: hi confirm can collect sat 2pm right
+[Tue 9:30am] Auntie Mei: yes confirmed
+
+[Tue 1:00pm] Rachel: hi got receive my paynow anot, worried leh
+[Tue 1:15pm] Auntie Mei: got got sorry late reply, confirmed received`,
+
+  grocery: `[Interview transcript — Mr Tan, owner of Tan Seng Huat Provision Shop, a neighbourhood grocery in Ang Mo Kio. Recorded by consultant.]
+
+Q: How's business these days?
+Mr Tan: Slow lah. Last time the whole block come to me. Now young people buy online or go NTUC, Sheng Siong. My customers mostly aunties uncles already old, some pass away, some move go stay with children. Every year fewer.
+
+Q: How do you let people know about offers or new stock?
+Mr Tan: I write on cardboard with marker paste on the door. That's all. Sometimes I got biscuits, canned food near expiry, I want to clear cheap but nobody know I have. No Facebook, no Instagram. My daughter say must go online but I don't know how, also no time, I open shop 7am to 9pm alone.
+
+Q: How do you decide what to restock?
+Mr Tan: All inside my head. I order from supplier by feeling. Sometimes over-order, thing expire, throw away, lose money. Sometimes the popular item finish, customer come I don't have, they go elsewhere and never come back.
+
+Q: You mentioned you contact some regulars?
+Mr Tan: Ya about 40 regulars I got their handphone. When their usual item come in, like fresh kampung eggs or a particular brand, I call them one by one to tell. Take the whole morning, and sometimes I forget who already called.
+
+Q: Anything about the new families nearby?
+Mr Tan: That one I really worried. Got new BTO just behind, so many young families. They walk past my shop every day, never come in. I don't know how to bring them in. I sell cheaper than supermarket for some things but they don't know me. I also thinking should I do delivery for them but no idea how to start.`,
+
+  mover: `[Forwarded emails + owner notes — Ah Meng, owner of SwiftMove, a small house-moving company. 3 lorries, 6 workers.]
+
+Subject: Moving quote — 3 Nov
+From: jenny.koh@gmail.com
+Hi, I'm moving from a 4-room flat in Yishun to a condo in Bishan on 3 Nov. Got fridge, washing machine, 3 bedrooms of furniture, quite a lot of boxes. How much? Can come see first?
+
+>> Ah Meng note: I reply every one of these by hand. Maybe 10 to 15 enquiries a week from Carousell, my website form and email. Every time I ask the same questions — how many rooms, got lift or not, which floor, any bulky item, what date. After I quote, more than half never reply back and I don't follow up, no time.
+
+Subject: need mover this Sat urgent
+From: raj_moving@hotmail.com
+Bro you free this Saturday? Moving 2-room flat Jurong to Clementi. Got one upright piano.
+
+>> Ah Meng note: Piano need extra 2 workers and special trolley, got surcharge. But I always forget to tell the customer until on the day, then they argue about the price. Very awkward.
+
+Subject: Still on??
+From: mrs.lim.family@gmail.com
+Hi I emailed on Monday about my move on the 28th, until now no reply. Is it confirmed or not?
+
+>> Ah Meng note: Her email got buried in my inbox, I totally missed it. This happens a lot and I lose jobs. I also assign which workers and which lorry to each job on a paper wall calendar — sometimes I double-book two jobs same slot, sometimes a lorry sit idle whole day. And after the move, I chase payment by texting customers one by one, some drag two three weeks before they pay.`
+};
+
+document.querySelectorAll('.sample').forEach(btn => {
+  btn.onclick = () => { document.getElementById('rawInput').value = SAMPLES[btn.getAttribute('data-sample')]; };
+});
+
+let tasks = [];
+let lang = 'en';
+const decisions = {};
+
+function setTrace(step) {
+  const el = document.getElementById('trace');
+  el.classList.remove('hidden');
+  const map = { parser: 'traceParser', analyst: 'traceAnalyst', compiler: 'traceCompiler' };
+  ['parser','analyst','compiler'].forEach(s => {
+    const dot = document.querySelector('#' + map[s] + ' .dot');
+    dot.className = 'dot' + (s === step ? ' active' : (order(s) < order(step) ? ' done' : ''));
+  });
+}
+function order(s){ return { parser:0, analyst:1, compiler:2 }[s]; }
+
+document.getElementById('analyzeBtn').onclick = async () => {
+  const raw = document.getElementById('rawInput').value.trim();
+  if (!raw) return;
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('taskList').innerHTML = '';
+  document.getElementById('overviewBar').classList.add('hidden');
+  document.getElementById('reportCard').classList.add('hidden');
+  setTrace('parser');
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw_material: raw })
+    });
+    setTrace('analyst');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    tasks = data.tasks;
+    tasks.forEach(t => decisions[t.id] = null);
+    setTrace('compiler');
+    renderTasks();
+  } catch (e) {
+    alert('Analysis failed: ' + e.message);
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+};
+
+function statusLabel(s) {
+  return { high_confidence: 'High confidence', needs_clarification: 'Needs clarification', needs_human_judgment: 'Needs your judgment' }[s];
+}
+
+async function fetchRoi(t) {
+  const rate = Number(document.getElementById('hourlyRate').value) || 20;
+  const res = await fetch('/api/roi', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_hours_per_week: t.current_hours_per_week, after_hours_per_week: t.after_hours_per_week, hourly_rate: rate })
+  });
+  return res.json();
+}
+
+const OV = {
+  en: { found: 'opportunities found', ready: 'ready', clarify: 'to clarify', yourCall: 'your call',
+        potential: 'Automatable potential', approved: 'Approved', wk: 'hrs/wk' },
+  zh: { found: '项机会', ready: '可直接做', clarify: '待澄清', yourCall: '由您定',
+        potential: '可自动化潜力', approved: '已批准', wk: '小时/周' }
+};
+
+function renderOverview(counts, value, hours, approvedCount) {
+  const o = OV[lang];
+  const bar = document.getElementById('overviewBar');
+  bar.innerHTML = `
+    <div class="ov-top">
+      <div class="ov-count"><b>${tasks.length}</b> <span>${o.found}</span></div>
+      <div class="ov-chips">
+        <span class="ovchip hc">${counts.high_confidence} ${o.ready}</span>
+        <span class="ovchip nc">${counts.needs_clarification} ${o.clarify}</span>
+        <span class="ovchip hj">${counts.needs_human_judgment} ${o.yourCall}</span>
+      </div>
+    </div>
+    <div class="ov-bottom">
+      <span>${o.potential}: <b>$${value}/mo</b> · <b>${hours} ${o.wk}</b></span>
+      <span>${o.approved}: <b>${approvedCount}</b></span>
+    </div>`;
+  bar.classList.remove('hidden');
+}
+
+async function renderTasks() {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  const counts = { high_confidence: 0, needs_clarification: 0, needs_human_judgment: 0 };
+  let ovValue = 0, ovHours = 0;
+  for (const t of tasks) {
+    counts[t.status] = (counts[t.status] || 0) + 1;
+    const card = document.createElement('div');
+    card.className = 'card';
+    const title = lang === 'en' ? t.title_en : t.title_zh;
+    const obs = lang === 'en' ? t.observation_en : t.observation_zh;
+
+    let statsHtml = '';
+    if (t.status !== 'needs_clarification') {
+      const roi = await fetchRoi(t);
+      ovValue += roi.monthly_value;
+      ovHours += roi.hours_saved_per_week;
+      statsHtml = `<div class="stats">
+        <div class="stat"><p class="l">Now</p><p class="v">${t.current_hours_per_week} hrs/wk</p></div>
+        <div class="stat"><p class="l">After</p><p class="v">${t.after_hours_per_week} hrs/wk</p></div>
+        <div class="stat"><p class="l">Value</p><p class="v">$${roi.monthly_value}/mo</p></div>
+      </div>`;
+    }
+
+    let bodyHtml = `<div class="task-title"><span class="name">${title}</span><span class="badge ${t.status}">${statusLabel(t.status)}</span></div>
+      <p class="obs">${obs}</p>${statsHtml}`;
+
+    if (t.status === 'needs_clarification') {
+      const q = lang === 'en' ? t.clarifying_question_en : t.clarifying_question_zh;
+      bodyHtml += `<div class="clarify-box">
+        <p>${q}</p>
+        <input type="text" id="ans-${t.id}" placeholder="Type your answer" style="width:70%">
+        <button data-id="${t.id}" class="answerBtn" style="margin-left:6px;">Submit answer</button>
+      </div>`;
+    } else {
+      const dec = decisions[t.id];
+      bodyHtml += `<div class="row">
+        <button class="decision-btn ${dec==='approve'?'on-approve':'secondary'}" data-id="${t.id}" data-action="approve">Approve</button>
+        <button class="decision-btn ${dec==='reject'?'on-reject':'secondary'}" data-id="${t.id}" data-action="reject">Reject</button>
+      </div>`;
+    }
+    card.innerHTML = bodyHtml;
+    list.appendChild(card);
+  }
+
+  const approvedCount = tasks.filter(t => decisions[t.id] === 'approve').length;
+  renderOverview(counts, Math.round(ovValue), Math.round(ovHours * 10) / 10, approvedCount);
+
+  document.querySelectorAll('.answerBtn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.getAttribute('data-id');
+      const t = tasks.find(x => x.id === id);
+      const answer = document.getElementById('ans-' + id).value.trim();
+      if (!answer) return;
+      btn.disabled = true;
+      const res = await fetch('/api/clarify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title_en: t.title_en, previous_observation_en: t.observation_en, question_en: t.clarifying_question_en, answer })
+      });
+      const updated = await res.json();
+      Object.assign(t, updated);
+      renderTasks();
+    };
+  });
+
+  document.querySelectorAll('.decision-btn').forEach(btn => {
+    btn.onclick = () => {
+      decisions[btn.getAttribute('data-id')] = btn.getAttribute('data-action');
+      renderTasks();
+      maybeShowReport();
+    };
+  });
+
+  maybeShowReport();
+}
+
+function maybeShowReport() {
+  const approved = tasks.filter(t => decisions[t.id] === 'approve');
+  const reportCard = document.getElementById('reportCard');
+  if (approved.length === 0) { reportCard.classList.add('hidden'); return; }
+  reportCard.classList.remove('hidden');
+  renderReport(approved);
+}
+
+const T = {
+  en: {
+    title: 'AI Automation Diagnostic',
+    preparedFor: (c, d) => c ? `Prepared for ${c} · ${d}` : `Prepared ${d}`,
+    intro: 'A rapid first-pass review of your day-to-day operations — the tasks most worth automating, what they cost you now, and what you stand to get back.',
+    summary: (n, v) => `${n} opportunit${n === 1 ? 'y' : 'ies'} identified · est. $${v}/month in reclaimed value`,
+    hours: (a, b) => `Now ${a} hrs/wk → after ${b} hrs/wk`,
+    heroTime: (h) => `${h} hrs/wk`,
+    heroValue: (v) => `$${v}/mo`,
+    heroTimeLbl: 'time reclaimed',
+    heroValueLbl: 'estimated value',
+    heroDaysYr: (d) => `≈ ${d} working days / year`,
+    heroValueYr: (v) => `≈ $${v} / year`,
+    judgment: 'Your call to make',
+    ctaLabel: 'Recommended next step',
+    ctaText: 'A short consultation to turn the highest-value opportunities above into a concrete, ready-to-run implementation plan.',
+    flowHeading: 'How it works',
+    footer: 'This is a rapid diagnostic. Full implementation roadmap available upon consultation.'
+  },
+  zh: {
+    title: 'AI 自动化诊断报告',
+    preparedFor: (c, d) => c ? `为 ${c} 准备 · ${d}` : `诊断日期 ${d}`,
+    intro: '针对您日常运营的快速首轮诊断——最值得自动化的环节、目前占用您多少时间、以及能为您省回多少。',
+    summary: (n, v) => `已识别 ${n} 项机会 · 预估每月省回价值 $${v}`,
+    hours: (a, b) => `现状 ${a} 小时/周 → 自动化后 ${b} 小时/周`,
+    heroTime: (h) => `${h} 小时/周`,
+    heroValue: (v) => `$${v}/月`,
+    heroTimeLbl: '每周省回时间',
+    heroValueLbl: '预估月度价值',
+    heroDaysYr: (d) => `≈ 每年 ${d} 个工作日`,
+    heroValueYr: (v) => `≈ $${v} / 年`,
+    judgment: '由您本人决定',
+    ctaLabel: '建议的下一步',
+    ctaText: '一次简短咨询，把上面价值最高的几项转化为可直接落地执行的实施方案。',
+    flowHeading: '自动化流程',
+    footer: '本诊断为快速评估，完整实施方案需进一步咨询。'
+  }
+};
+
+function todayStr() {
+  return new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+// Wrap a step label into up to 2 lines that fit inside a node. English wraps on words, Chinese on characters.
+function wrapLabel(text, isZh) {
+  text = String(text).trim();
+  const max = isZh ? 9 : 17, maxLines = 2;
+  let lines = [];
+  if (isZh || !/\s/.test(text)) {
+    for (let i = 0; i < text.length && lines.length < maxLines; i += max) lines.push(text.slice(i, i + max));
+    if (text.length > max * maxLines) lines[maxLines - 1] = lines[maxLines - 1].slice(0, max - 1) + '…';
+  } else {
+    let cur = '';
+    for (const w of text.split(/\s+/)) {
+      const t = cur ? cur + ' ' + w : w;
+      if (t.length <= max) { cur = t; }
+      else if (lines.length < maxLines - 1) { lines.push(cur); cur = w; }
+      else { cur = t; }
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].slice(0, max - 1) + '…'; }
+  }
+  return lines.length ? lines : [text];
+}
+
+// Emoji avatar: role only (person / robot). Emotion is intentionally not shown.
+const ROLE_EMOJI = { customer: '🙋', owner: '🧑‍🍳', worker: '🧑‍🔧', system: '🤖' };
+function roleEmoji(actor) {
+  return ROLE_EMOJI[actor] || '👤';
+}
+
+// Build a single SVG flow diagram for one opportunity's steps. Role emoji per step; no travelling dot.
+function buildFlowSvg(steps, lng) {
+  if (!steps || steps.length < 2) return '';
+  const isZh = lng === 'zh';
+  const nodeW = 118, nodeH = 42, gapX = 36, padX = 10, avatarCy = 24, topY = 30;
+  const n = steps.length;
+  const width = padX * 2 + n * nodeW + (n - 1) * gapX;
+  const height = topY + nodeH + 12;
+  const midY = topY + nodeH / 2;
+  const nodeX = i => padX + i * (nodeW + gapX);
+  const uid = 'fl' + Math.random().toString(36).slice(2, 7);
+
+  const defs = `<defs>
+    <linearGradient id="${uid}g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b7fd0"/><stop offset="1" stop-color="#185fa5"/>
+    </linearGradient>
+    <marker id="${uid}a" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#9db6cc"/>
+    </marker>
+  </defs>`;
+
+  let conns = '', nodes = '';
+  for (let i = 0; i < n; i++) {
+    const x = nodeX(i), cx = x + nodeW / 2, s = steps[i];
+    const lines = wrapLabel(isZh ? s.label_zh : s.label_en, isZh);
+    const startDy = -((lines.length - 1) * 7);
+    const tspans = lines.map((ln, k) =>
+      `<tspan x="${cx}" dy="${k === 0 ? startDy : 14}">${escapeHtml(ln)}</tspan>`).join('');
+    nodes += `<g class="flow-node" style="animation-delay:${(i * 0.15).toFixed(2)}s">
+      <text x="${cx}" y="${avatarCy}" text-anchor="middle" font-size="18">${roleEmoji(s.actor)}</text>
+      <rect x="${x}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="9" fill="url(#${uid}g)"/>
+      <text x="${cx}" y="${midY + 4}" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="600">${tspans}</text>
+    </g>`;
+    if (i < n - 1) {
+      const x1 = x + nodeW, x2 = nodeX(i + 1);
+      conns += `<line class="flow-conn" x1="${x1 + 2}" y1="${midY}" x2="${x2 - 5}" y2="${midY}" stroke="#9db6cc" stroke-width="2" marker-end="url(#${uid}a)"/>`;
+    }
+  }
+
+  return `<div class="flow-wrap"><svg class="flow-svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="automation flow">${defs}${conns}${nodes}</svg></div>`;
+}
+
+async function renderReport(approved) {
+  const t9n = T[lang];
+  const client = document.getElementById('clientName').value.trim();
+
+  document.getElementById('reportTitle').textContent = t9n.title;
+  document.getElementById('reportSub').textContent = t9n.preparedFor(client, todayStr());
+  document.getElementById('reportIntro').textContent = t9n.intro;
+  document.getElementById('footerNote').textContent = t9n.footer;
+
+  let totalValue = 0, totalHours = 0, n = 0;
+  let rows = '';
+  for (const t of approved) {
+    n++;
+    const title = lang === 'en' ? t.title_en : t.title_zh;
+    // Client-facing recommendation is the deliverable copy; fall back to the observation if absent.
+    const rec = (lang === 'en' ? t.recommendation_en : t.recommendation_zh)
+      || (lang === 'en' ? t.observation_en : t.observation_zh);
+
+    let valueHtml, hoursHtml = '';
+    if (t.status === 'needs_human_judgment') {
+      // Relationship / pricing calls carry no automation claim — never show a dollar figure.
+      valueHtml = `<span class="ri-value judgment">${t9n.judgment}</span>`;
+    } else {
+      const roi = await fetchRoi(t);
+      totalValue += roi.monthly_value;
+      totalHours += roi.hours_saved_per_week;
+      valueHtml = `<span class="ri-value">$${roi.monthly_value}/mo</span>`;
+      hoursHtml = `<p class="ri-hours">${t9n.hours(t.current_hours_per_week, t.after_hours_per_week)}</p>`;
+    }
+
+    const flowHtml = (t.status === 'high_confidence' && Array.isArray(t.automation_flow) && t.automation_flow.length >= 2)
+      ? `<p class="flow-heading">${t9n.flowHeading}</p>${buildFlowSvg(t.automation_flow, lang)}`
+      : '';
+
+    rows += `<div class="report-item">
+      <div class="ri-top"><span class="ri-name">${n}. ${title}</span>${valueHtml}</div>
+      <p class="ri-rec">${rec}</p>
+      ${hoursHtml}
+      ${flowHtml}
+    </div>`;
+  }
+
+  totalHours = Math.round(totalHours * 10) / 10;
+  totalValue = Math.round(totalValue);
+
+  // Annualized figures — SMEs respond to "days/year" and "$/year" far more than weekly numbers.
+  const daysPerYear = Math.round(totalHours * 52 / 8);
+  const valuePerYear = totalValue * 12;
+  const hero = `<div class="report-hero">
+    <div class="hero-metric">
+      <div class="hero-num">${t9n.heroTime(totalHours)}</div>
+      <div class="hero-sub">${t9n.heroDaysYr(daysPerYear)}</div>
+      <div class="hero-lbl">${t9n.heroTimeLbl}</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-num">${t9n.heroValue(totalValue)}</div>
+      <div class="hero-sub">${t9n.heroValueYr(valuePerYear)}</div>
+      <div class="hero-lbl">${t9n.heroValueLbl}</div>
+    </div>
+  </div>`;
+  const summary = `<p class="report-summary">${t9n.summary(approved.length, totalValue)}</p>`;
+  const cta = `<div class="report-cta"><div class="cta-label">${t9n.ctaLabel}</div><div class="cta-text">${t9n.ctaText}</div></div>`;
+
+  document.getElementById('reportBody').innerHTML = hero + summary + rows + cta;
+}
+
+document.getElementById('langEn').onclick = () => { lang = 'en'; renderTasks(); };
+document.getElementById('langZh').onclick = () => { lang = 'zh'; renderTasks(); };
+document.getElementById('clientName').oninput = () => maybeShowReport();
+document.getElementById('exportBtn').onclick = () => window.print();
+</script>
+</body>
+</html>
