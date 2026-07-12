@@ -4,6 +4,8 @@ AI does the first pass. You make the call.
 
 AdvisorLoop is an agentic diagnostic tool for solo AI consultants serving SMEs. Paste in a client's raw, messy operational material (WhatsApp order logs, notes, emails) and AdvisorLoop's agents surface concrete, task-level automation opportunities — not a generic "AI strategy" — each tagged by confidence, with an autonomous clarify loop for anything ambiguous, and a strict human review gate before anything reaches a client-facing report.
 
+![AdvisorLoop — from a client's raw material to an approved, bilingual diagnostic report with ROI and automation-flow diagrams](screenshots/02-grocery-report.png)
+
 ## Why this exists
 
 Small businesses in Singapore don't need an enterprise AI readiness framework. They need someone to look at their actual daily mess and say exactly what's worth automating first. A solo consultant doesn't have the bandwidth to do that manual first pass for every prospect — AdvisorLoop does it in seconds, and the consultant keeps the judgment, the pricing call, and the client relationship.
